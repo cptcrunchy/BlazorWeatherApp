@@ -3,58 +3,80 @@
 
 @if (weatherLoaded)
 {
-    <h2>@zipLookup.Places[0].City, @zipLookup.Places[0].Stateabbr</h2>
-    <p>
-        Current Temp is: @ConvertKtoF(currentCondition.Main.Temp, 1) &#176;F
-        <span>@currentCondition.Weather[0].Main <img src="@imgurl" /></span>
-    </p>
+    <h1>
+        @ziplookup.Places[0].City, @ziplookup.Places[0].Stateabbr<br />
+        @ConvertKtoF(currentCondition.Main.Temp, 1) &#176;F
+    </h1>
+    <h2>
+        @currentCondition.Weather[0].Main <img src="@imgurl" style="display:inline" />
+    </h2>
     <h3>
-        <span style="display:inline;color:red">
-            HI
-            @ConvertKtoF(currentCondition.Main.Temp_max, 0)  &#176;F
-        </span> /
-        <span style="color:blue">
-            LO @ConvertKtoF(currentCondition.Main.Temp_min, 0)  &#176;F
-        </span>
+        <span style="display:inline;color:red">HI @ConvertKtoF(currentCondition.Main.Temp_max, 0)  &#176;F</span> /
+        <span style="color:blue">LO @ConvertKtoF(currentCondition.Main.Temp_min, 0)  &#176;F</span><br />
     </h3>
+    <br />
+    @if (alerts.Features.Length > 0)
+    {
+        <h2>Alerts</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Alert</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var alert in alerts.Features)
+                {
+                    <tr>
+                        <td>@alert.Properties.Effective.ToString("MM/dd/yyyy hh:mmt")</td>
+                        <td>
+                            <span style="font-weight:600">@alert.Properties.Headline</span><br />
+                            <span>@alert.Properties.Description</span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
 }
 else
 {
     <h1>Weather Forecast</h1>
-
-    <p>This component demonstrates fetching data from the openweather API.</p>
-
+    <p>This component will retreive real-time data using the OpenWeather API.</p>
     <div class="input-group col-md-3">
-        <input type="text" class="form-control" placeholder="Enter Zipcode" bind="@zipcode" maxlength="5" />
+        <input type="text" class="form-control" placeholder="Enter a Zipcode" bind="@zipcode" maxlength="5" />
         <div class="input-group-append">
-            <button class="btn btn-primary" onclick="@GetWeather">Get Weather</button>
+            <button class="btn btn-secondary" type="button" onclick="@GetWeather">Get Weather</button>
         </div>
     </div>
-    <br />
-    <p>@errMessage</p>
+    <br /><span style="color:red">@errMessage</span>
 }
 
-
 @functions {
-
     string zipcode = string.Empty;
-    string baseURI = "https://api.openweathermap.org";
-    string apiKey = "93f0b74104f16e4f15a144056218b830";
     string errMessage = string.Empty;
+    string oWeatherURI = "http://api.openweathermap.org";
+    string oWeatherAPI = "0e25dfeca63103d3a311c460a9e27548";
+    string nwsBaseURI = "https://api.weather.gov";
     Models.CurrentConditions currentCondition;
-    Models.ZipLookup zipLookup;
-    string imgurl = string.Empty;
+    Models.Alert alerts;
+    Models.ZipLookup ziplookup;
+    string imgurl = "";
     bool weatherLoaded = false;
-
 
     private async Task GetWeather()
     {
+        Http.DefaultRequestHeaders.Add("Accept", "application/vnd.noaa.dwml+json;version=1");
+        Http.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36");
+
+        // get location info from zipcode
         try
         {
             errMessage = "";
-            var zipcoderesultStr = await Http.GetStringAsync($"http://api.zippopotam.us/US/{zipcode}");
-            zipcoderesultStr = zipcoderesultStr.Replace("place name", "city").Replace("state abbreviation", "stateabbr");
-            zipLookup = Microsoft.JSInterop.Json.Deserialize<Models.ZipLookup>(zipcoderesultStr);
+            var zipresultStr = await Http.GetStringAsync($"http://api.zippopotam.us/US/{zipcode}");
+            zipresultStr = zipresultStr.Replace("place name", "city").Replace("state abbreviation", "stateabbr");
+            ziplookup =  Microsoft.JSInterop.Json.Deserialize<Models.ZipLookup>(zipresultStr);
         }
         catch
         {
@@ -62,14 +84,15 @@ else
             return;
         }
 
-        // Fetch current conditions by zipcode
-        currentCondition = await Http.GetJsonAsync<Models.CurrentConditions>($"{baseURI}/data/2.5/weather?zip={zipcode},us&appid={apiKey}");
-        imgurl = $"{baseURI}/img/w/{currentCondition.Weather[0].Icon}.png";
+        // get current condition by zip
+        currentCondition = await Http.GetJsonAsync<Models.CurrentConditions>($"{oWeatherURI}/data/2.5/weather?zip={zipcode},us&appid={oWeatherAPI}");
+        imgurl = $"{oWeatherURI}/img/w/{currentCondition.Weather[0].Icon}.png";
+
+        // retrieve nws alerts for state
+        alerts = await Http.GetJsonAsync<Models.Alert>($"{nwsBaseURI}/alerts/active/area/{ziplookup.Places[0].Stateabbr}");
 
         weatherLoaded = true;
-
     }
-
 
     private decimal ConvertKtoF(decimal kelvin, int decimals)
     {
