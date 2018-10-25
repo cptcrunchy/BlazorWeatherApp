@@ -1,0 +1,78 @@
+﻿@page "/weather"
+@inject HttpClient Http
+
+@if (weatherLoaded)
+{
+    <h2>@zipLookup.Places[0].City, @zipLookup.Places[0].Stateabbr</h2>
+    <p>
+        Current Temp is: @ConvertKtoF(currentCondition.Main.Temp, 1) &#176;F
+        <span>@currentCondition.Weather[0].Main <img src="@imgurl" /></span>
+    </p>
+    <h3>
+        <span style="display:inline;color:red">
+            HI
+            @ConvertKtoF(currentCondition.Main.Temp_max, 0)  &#176;F
+        </span> /
+        <span style="color:blue">
+            LO @ConvertKtoF(currentCondition.Main.Temp_min, 0)  &#176;F
+        </span>
+    </h3>
+}
+else
+{
+    <h1>Weather Forecast</h1>
+
+    <p>This component demonstrates fetching data from the openweather API.</p>
+
+    <div class="input-group col-md-3">
+        <input type="text" class="form-control" placeholder="Enter Zipcode" bind="@zipcode" maxlength="5" />
+        <div class="input-group-append">
+            <button class="btn btn-primary" onclick="@GetWeather">Get Weather</button>
+        </div>
+    </div>
+    <br />
+    <p>@errMessage</p>
+}
+
+
+@functions {
+
+    string zipcode = string.Empty;
+    string baseURI = "https://api.openweathermap.org";
+    string apiKey = "93f0b74104f16e4f15a144056218b830";
+    string errMessage = string.Empty;
+    Models.CurrentConditions currentCondition;
+    Models.ZipLookup zipLookup;
+    string imgurl = string.Empty;
+    bool weatherLoaded = false;
+
+
+    private async Task GetWeather()
+    {
+        try
+        {
+            errMessage = "";
+            var zipcoderesultStr = await Http.GetStringAsync($"http://api.zippopotam.us/US/{zipcode}");
+            zipcoderesultStr = zipcoderesultStr.Replace("place name", "city").Replace("state abbreviation", "stateabbr");
+            zipLookup = Microsoft.JSInterop.Json.Deserialize<Models.ZipLookup>(zipcoderesultStr);
+        }
+        catch
+        {
+            errMessage = "Invalid Zipcode";
+            return;
+        }
+
+        // Fetch current conditions by zipcode
+        currentCondition = await Http.GetJsonAsync<Models.CurrentConditions>($"{baseURI}/data/2.5/weather?zip={zipcode},us&appid={apiKey}");
+        imgurl = $"{baseURI}/img/w/{currentCondition.Weather[0].Icon}.png";
+
+        weatherLoaded = true;
+
+    }
+
+
+    private decimal ConvertKtoF(decimal kelvin, int decimals)
+    {
+        return Math.Round(kelvin * 9 / 5 - 459.67M, decimals);
+    }
+}

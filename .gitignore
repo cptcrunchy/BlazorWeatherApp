@@ -1,1 +1,3 @@
 \.vs/
+\BlazorWeatherApp/obj
+\BlazorWeatherApp/bin
