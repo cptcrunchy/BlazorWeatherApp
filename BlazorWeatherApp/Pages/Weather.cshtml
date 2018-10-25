@@ -47,7 +47,7 @@ else
     <div class="input-group col-md-3">
         <input type="text" class="form-control" placeholder="Enter a Zipcode" bind="@zipcode" maxlength="5" />
         <div class="input-group-append">
-            <button class="btn btn-secondary" type="button" onclick="@GetWeather">Get Weather</button>
+            <button class="btn btn-primary" type="button" onclick="@GetWeather">Get Weather</button>
         </div>
     </div>
     <br /><span style="color:red">@errMessage</span>
@@ -67,8 +67,7 @@ else
 
     private async Task GetWeather()
     {
-        Http.DefaultRequestHeaders.Add("Accept", "application/vnd.noaa.dwml+json;version=1");
-        Http.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36");
+       
 
         // get location info from zipcode
         try
